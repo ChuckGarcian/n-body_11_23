@@ -156,7 +156,6 @@ static double get_distance (struct body *bdyA, struct body *bdyB)
    bodies such that they are not intersecting.
    
    References: https://ericleong.me/research/circle-circle/
-  */
 */
 static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance)
 {
