@@ -110,44 +110,6 @@ static void update_bodies (struct body *bodies, size_t cnt)
 /* Resolves Body Collisions with perfect inelastic collision */
 static void handle_collision (struct body *bodies, size_t cnt)
 {
-
-  // for (int i = 0; i < cnt; i++)
-  // {
-  //   struct body *bdy1 = &bodies[i];
-
-  //   for (int j = 0; j < cnt; j++)
-  //   {
-  //     struct body *bdy2 = &bodies[j];
-
-  //     double dx = bdy1->posX - bdy2->posX;
-  //     double dy =  bdy1->posY - bdy2->posY;
-  //     double dis = get_distance (bdy1, bdy2);
-  //     double radi = bdy1->radius + 5 + bdy2->radius + 5; 
-  //     if (dis <= radi && dis >= 1)
-  //     {
-
-  //       dx = dx / dis;
-  //       dy = dy / dis;
-
-  //       /* Move bodies from clipping each other */  
-  //       bdy1->posX -=  (dy * ((radi - dis) / 2));
-  //       bdy1->posY -=  (dx * ((radi - dis)  / 2));
-  //       bdy2->posX += (dy * ((radi - dis)/ 2) );
-  //       bdy2->posY += (dx * ((radi - dis) / 2) );
-
-  //       /* Momentum is conserved m₁v₁ + m₂v₂ = (m₁ + m₂)v′*/
-  //       double vx = (bdy1->mass * bdy1->vel_x + bdy2->mass * bdy2->vel_x) / (bdy1->mass + bdy2->mass);
-  //       double vy = (bdy1->mass * bdy1->vel_y+ bdy2->mass * bdy2->vel_y) / (bdy1->mass + bdy2->mass);
-  //       bdy1->vel_x = vx;
-  //       bdy1->vel_y = vy;
-  //       bdy2->vel_x = vx;
-  //       bdy2->vel_y = vy;
-  //     }
-  //   }
-  // }
-  /* Referenced this article on the math for circle collissions
-     https://ericleong.me/research/circle-circle/
-  */
   for (int i = 0; i < cnt; i++)
     {
         struct body *bdy1 = &bodies[i];
@@ -192,6 +154,9 @@ static double get_distance (struct body *bdyA, struct body *bdyB)
 /* 
    Resolves body collision by body 'BDYA' and body 'BDYB' by positioning both 
    bodies such that they are not intersecting.
+   
+   References: https://ericleong.me/research/circle-circle/
+  */
 */
 static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance)
 {
