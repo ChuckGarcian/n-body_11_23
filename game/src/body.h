@@ -10,15 +10,15 @@
 struct body 
 {
   /* Simulation Relevant Properties */
-  int posX;
-  int posY;
+  double posX;
+  double posY;
 
-  int vel_x;
-  int vel_y;
+  double vel_x;
+  double vel_y;
   
-  int mass;
+  double mass;
 
   /* Graphics Related Properties */
-  int radius;
+  double radius;
   struct Color color; 
 };

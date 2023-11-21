@@ -4,10 +4,16 @@
 #include "body.h"
 #include <math.h>
 
+/* Static Functions */
 static void init_bodies (struct body *bodies, size_t cnt);
 static void draw_bodies (struct body *bodies, size_t cnt);
 static void update_bodies (struct body *bodies, size_t cnt);
-const double dt = .1
+static void handle_collision (struct body *bodies, size_t cnt);
+static double get_distance (struct body *bdyA, struct body *bdyB);
+static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance);
+
+/* Global Constants */
+const double dt = .2;
 
 int main(void)
 {
@@ -25,7 +31,8 @@ int main(void)
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
       // Update
-      update_bodies (bodies, bdy_cnt);     
+      update_bodies (bodies, bdy_cnt); 
+      handle_collision (bodies, bdy_cnt);
       /* Draw Bodies */
       BeginDrawing();
       ClearBackground(RAYWHITE);
@@ -65,8 +72,6 @@ static void draw_bodies (struct body *bodies, size_t cnt)
 /* Updates all bodies by a time step */
 static void update_bodies (struct body *bodies, size_t cnt)
 {
-  
-  // printf ("cnt=%d \n", cnt);
   for (int i = 0; i < cnt; i++)
   {
     struct body *bdy1 = &bodies[i];
@@ -79,9 +84,9 @@ static void update_bodies (struct body *bodies, size_t cnt)
       struct body *bdy2 = &bodies[j];
       
       /* Determine Distance between bodies */
-      double radial_dist = sqrt (pow (bdy1->posX - bdy2->posX, 2) + pow (bdy1->posY - bdy2->posY, 2));
+      double radial_dist = get_distance (bdy1, bdy2);      
       double r = radial_dist * radial_dist; // Needs to be squared not cubed 
-    
+
       /* Newton's Law of Gravity: F = mm-/r² ⟹ a = m/r² */      
       ax -= bdy2->mass * (bdy1->posX - bdy2->posX) / r;
       ay -= bdy2->mass * (bdy1->posY - bdy2->posY) / r;
@@ -100,4 +105,109 @@ static void update_bodies (struct body *bodies, size_t cnt)
     }
 
 
+}
+
+/* Resolves Body Collisions with perfect inelastic collision */
+static void handle_collision (struct body *bodies, size_t cnt)
+{
+
+  // for (int i = 0; i < cnt; i++)
+  // {
+  //   struct body *bdy1 = &bodies[i];
+
+  //   for (int j = 0; j < cnt; j++)
+  //   {
+  //     struct body *bdy2 = &bodies[j];
+
+  //     double dx = bdy1->posX - bdy2->posX;
+  //     double dy =  bdy1->posY - bdy2->posY;
+  //     double dis = get_distance (bdy1, bdy2);
+  //     double radi = bdy1->radius + 5 + bdy2->radius + 5; 
+  //     if (dis <= radi && dis >= 1)
+  //     {
+
+  //       dx = dx / dis;
+  //       dy = dy / dis;
+
+  //       /* Move bodies from clipping each other */  
+  //       bdy1->posX -=  (dy * ((radi - dis) / 2));
+  //       bdy1->posY -=  (dx * ((radi - dis)  / 2));
+  //       bdy2->posX += (dy * ((radi - dis)/ 2) );
+  //       bdy2->posY += (dx * ((radi - dis) / 2) );
+
+  //       /* Momentum is conserved m₁v₁ + m₂v₂ = (m₁ + m₂)v′*/
+  //       double vx = (bdy1->mass * bdy1->vel_x + bdy2->mass * bdy2->vel_x) / (bdy1->mass + bdy2->mass);
+  //       double vy = (bdy1->mass * bdy1->vel_y+ bdy2->mass * bdy2->vel_y) / (bdy1->mass + bdy2->mass);
+  //       bdy1->vel_x = vx;
+  //       bdy1->vel_y = vy;
+  //       bdy2->vel_x = vx;
+  //       bdy2->vel_y = vy;
+  //     }
+  //   }
+  // }
+  /* Referenced this article on the math for circle collissions
+     https://ericleong.me/research/circle-circle/
+  */
+  for (int i = 0; i < cnt; i++)
+    {
+        struct body *bdy1 = &bodies[i];
+
+        for (int j = 0; j < cnt; j++)  // Avoid self-collision
+        {
+          if (i == j) continue;
+            struct body *bdy2 = &bodies[j];
+
+            double dx = bdy1->posX - bdy2->posX;
+            double dy = bdy1->posY - bdy2->posY;
+            double dis = get_distance(bdy1, bdy2); // Using square of distance to avoid sqrt
+            double radi_sum = (bdy1->radius) + (bdy1->radius) + 1; // Square of combined radii
+
+            if (dis <= radi_sum) // Check for collision
+          {
+            resolve_collision (bdy1, bdy2, dis);
+              // Momentum conservation for perfectly inelastic collision
+              double vx = (bdy1->mass * bdy1->vel_x + bdy2->mass * bdy2->vel_x) / (bdy1->mass + bdy2->mass);
+              double vy = (bdy1->mass * bdy1->vel_y + bdy2->mass * bdy2->vel_y) / (bdy1->mass + bdy2->mass);
+              bdy1->vel_x = vx;
+              bdy1->vel_y = vy;
+              bdy2->vel_x = vx;
+              bdy2->vel_y = vy;
+          }
+        }
+    }
+
+}
+
+
+/* Calculates the distance between the two bodies: BDYA and BDYB */
+static double get_distance (struct body *bdyA, struct body *bdyB)
+{
+  double dx = bdyA->posX - bdyB->posX; 
+  double dy = bdyA->posY - bdyB->posY;
+  double dist = sqrt (dx * dx + dy * dy);
+  double distance_tolerance = .20; /* Smallest distance two objects can be */
+  return (dist < distance_tolerance) ? distance_tolerance : dist;   
+}
+
+/* 
+   Resolves body collision by body 'BDYA' and body 'BDYB' by positioning both 
+   bodies such that they are not intersecting.
+*/
+static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance)
+{
+  /* Midpoint tells us how far bodies needs to be pushed
+     to resolve intersection (i.e collision) */
+  double midpoint_x = (bdyA->posX + bdyB->posX) / 2;
+  double midpoint_y = (bdyA->posY + bdyB->posY) / 2;
+  
+  /* Resolve body overlap */
+  double original_bdyA_x = bdyA->posX;
+  double original_bdyA_y = bdyA->posY;
+  double original_bdyB_x = bdyB->posX;
+  double original_bdyB_y = bdyB->posY;
+  
+  bdyA->posX = midpoint_x + bdyA->radius * (original_bdyA_x - original_bdyB_x) / distance;
+  bdyA->posY = midpoint_y + bdyA->radius * (original_bdyA_y - original_bdyB_y) / distance;
+  bdyB->posX = midpoint_x + bdyB->radius * (original_bdyB_x - original_bdyA_x) / distance;
+  bdyB->posY = midpoint_y + bdyB->radius * (original_bdyB_y - original_bdyA_y) / distance;
 }
