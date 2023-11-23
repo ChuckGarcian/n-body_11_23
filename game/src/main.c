@@ -5,13 +5,14 @@
 #include <math.h>
 
 /* Static Functions */
-static void init_bodies (struct body *bodies, size_t cnt);
+static void init_bodies (struct body *bodies, size_t cnt, float pct_heavy);
 static void draw_bodies (struct body *bodies, size_t cnt);
 static void update_bodies (struct body *bodies, size_t cnt);
 static void handle_collision (struct body *bodies, size_t cnt);
 static double get_distance (struct body *bdyA, struct body *bdyB);
 static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance);
 static void handle_camera_pos (Camera2D *_camera);
+
 
 /* Global Constants */
 const double dt = .2;
@@ -20,7 +21,7 @@ int main(void)
 {
     const int screenWidth = SCRNW;
     const int screenHeight = SRCHT;
-    const int bdy_cnt = 10; 
+    const int bdy_cnt = 1000;
     
     InitWindow(screenWidth, screenHeight, "n-body");
     SetTargetFPS(60);
@@ -30,7 +31,7 @@ int main(void)
     camera.zoom = 1;
 
     struct body bodies[bdy_cnt];
-    init_bodies (bodies, bdy_cnt);
+    init_bodies (bodies, bdy_cnt, .15);
     
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
@@ -38,12 +39,14 @@ int main(void)
       update_bodies (bodies, bdy_cnt); 
       handle_collision (bodies, bdy_cnt);
       handle_camera_pos (&camera);
+      
       /* Draw Bodies */
       BeginDrawing();
-      BeginMode2D (camera);
-      ClearBackground(RAYWHITE);
-      draw_bodies (bodies, bdy_cnt);
-      EndMode2D();
+        BeginMode2D (camera);
+          ClearBackground(BLACK);
+          
+          draw_bodies (bodies, bdy_cnt);
+        EndMode2D();
       EndDrawing();
     }
 
@@ -52,19 +55,51 @@ int main(void)
 }
 
 /* Initializes Bodies Array 'BODIES' of count 'CNT' */
-static void init_bodies (struct body *bodies, size_t cnt)
+static void init_bodies (struct body *bodies, size_t cnt, float pct_heavy)
 {
-  while (cnt--)
+  /* Number of heavy bodies and light bodies */
+  int heavy_cnt = cnt * pct_heavy;
+  int light_cnt = cnt - heavy_cnt;
+  int random_spawn_range = 10 * cnt;
+  printf ("cnt=%ld\n", cnt);
+  printf ("heavy_cnt=%d\n", heavy_cnt);
+  printf ("Light_cnt=%d\n", light_cnt);
+
+  while (heavy_cnt--)
   {
+    cnt--;
+    printf("Spawning heavy !\n");
+    printf ("cnt=%ld\n", cnt);
     struct body *bdy = &bodies[cnt];
-    bdy->color = RED;
+    bdy->color = RAYWHITE;
     bdy->radius = 10;
-    bdy->mass = 100;
-    bdy->posX = CENTER_X + cnt * 30;
-    bdy->posY = CENTER_Y + cnt * -20; 
+    bdy->mass = GetRandomValue (20, 30);
+    bdy->posX = CENTER_X + GetRandomValue(-1 * random_spawn_range, random_spawn_range);
+    bdy->posY = CENTER_Y + GetRandomValue(-1 * random_spawn_range, random_spawn_range); 
     bdy->vel_x = 0;
     bdy->vel_y = 0;
+    
   }
+
+  while (light_cnt --)
+  {
+    cnt--;
+    printf("Spawning light !\n");
+    printf ("cnt=%ld\n", cnt);
+    
+    struct body *bdy = &bodies[cnt];
+    bdy->color = RAYWHITE;
+    bdy->radius = 10;
+    bdy->mass = GetRandomValue (1, 10);
+    bdy->posX = CENTER_X + GetRandomValue(-1 * random_spawn_range, random_spawn_range);
+    bdy->posY = CENTER_Y + GetRandomValue(-1 * random_spawn_range, random_spawn_range);
+    bdy->vel_x = 0;
+    bdy->vel_y = 0;
+    
+  }
+  
+  printf("DONEGNERATINGBODIES\n");
+
 }
 
 static void draw_bodies (struct body *bodies, size_t cnt)
@@ -187,11 +222,13 @@ static void resolve_collision(struct body *bdyA, struct body *bdyB, double dista
 static void handle_camera_pos (Camera2D *_camera)
 {
   Camera2D camera = *_camera;
+  float incr_amt = 3 * (pow (20, 1 - camera.zoom));
+  
   /* Camera Position Controls */
-  if (IsKeyDown(KEY_RIGHT)) camera.target.x += 2;
-  if (IsKeyDown (KEY_LEFT)) camera.target.x -= 2;
-  if (IsKeyDown (KEY_UP)) camera.target.y -= 2;
-  if (IsKeyDown (KEY_DOWN)) camera.target.y += 2;
+  if (IsKeyDown(KEY_RIGHT)) camera.target.x += incr_amt;
+  if (IsKeyDown (KEY_LEFT)) camera.target.x -= incr_amt;
+  if (IsKeyDown (KEY_UP)) camera.target.y -= incr_amt;
+  if (IsKeyDown (KEY_DOWN)) camera.target.y += incr_amt;
   
   /* Zoom Controls */
   if (IsKeyDown (KEY_W)) camera.zoom += .01;
