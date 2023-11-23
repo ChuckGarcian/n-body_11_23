@@ -11,6 +11,7 @@ static void update_bodies (struct body *bodies, size_t cnt);
 static void handle_collision (struct body *bodies, size_t cnt);
 static double get_distance (struct body *bdyA, struct body *bdyB);
 static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance);
+static void handle_camera_pos (Camera2D *_camera);
 
 /* Global Constants */
 const double dt = .2;
@@ -20,23 +21,29 @@ int main(void)
     const int screenWidth = SCRNW;
     const int screenHeight = SRCHT;
     const int bdy_cnt = 10; 
+    
+    InitWindow(screenWidth, screenHeight, "n-body");
+    SetTargetFPS(60);
+    
+    Camera2D camera = {0};
+    camera.target =  (Vector2) {0,0};
+    camera.zoom = 1;
 
     struct body bodies[bdy_cnt];
     init_bodies (bodies, bdy_cnt);
     
-    InitWindow(screenWidth, screenHeight, "n-body");
-    SetTargetFPS(60);
-     
-    // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
       // Update
       update_bodies (bodies, bdy_cnt); 
       handle_collision (bodies, bdy_cnt);
+      handle_camera_pos (&camera);
       /* Draw Bodies */
       BeginDrawing();
+      BeginMode2D (camera);
       ClearBackground(RAYWHITE);
       draw_bodies (bodies, bdy_cnt);
+      EndMode2D();
       EndDrawing();
     }
 
@@ -122,9 +129,9 @@ static void handle_collision (struct body *bodies, size_t cnt)
             double dx = bdy1->posX - bdy2->posX;
             double dy = bdy1->posY - bdy2->posY;
             double dis = get_distance(bdy1, bdy2); // Using square of distance to avoid sqrt
-            double radi_sum = (bdy1->radius) + (bdy1->radius) + 1; // Square of combined radii
+            double radi_sum = (bdy1->radius) + (bdy1->radius) + 0; // Square of combined radii
 
-            if (dis <= radi_sum) // Check for collision
+            if (dis < radi_sum) // Check for collision
           {
             resolve_collision (bdy1, bdy2, dis);
               // Momentum conservation for perfectly inelastic collision
@@ -174,4 +181,20 @@ static void resolve_collision(struct body *bdyA, struct body *bdyB, double dista
   bdyA->posY = midpoint_y + bdyA->radius * (original_bdyA_y - original_bdyB_y) / distance;
   bdyB->posX = midpoint_x + bdyB->radius * (original_bdyB_x - original_bdyA_x) / distance;
   bdyB->posY = midpoint_y + bdyB->radius * (original_bdyB_y - original_bdyA_y) / distance;
+}
+
+/* Updates CAMERA position from key press events */
+static void handle_camera_pos (Camera2D *_camera)
+{
+  Camera2D camera = *_camera;
+  /* Camera Position Controls */
+  if (IsKeyDown(KEY_RIGHT)) camera.target.x += 2;
+  if (IsKeyDown (KEY_LEFT)) camera.target.x -= 2;
+  if (IsKeyDown (KEY_UP)) camera.target.y -= 2;
+  if (IsKeyDown (KEY_DOWN)) camera.target.y += 2;
+  
+  /* Zoom Controls */
+  if (IsKeyDown (KEY_W)) camera.zoom += .01;
+  if (IsKeyDown (KEY_S)) camera.zoom -= .01;
+  *_camera = camera;
 }
