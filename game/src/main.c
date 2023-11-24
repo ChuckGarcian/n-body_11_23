@@ -2,13 +2,14 @@
 #include <stddef.h>
 #include "raylib.h"
 #include "body.h"
+#include "list.h"
 #include <math.h>
 
 /* Static Functions */
 static void init_bodies (struct body *bodies, size_t cnt, float pct_heavy);
 static void draw_bodies (struct body *bodies, size_t cnt);
 static void update_bodies (struct body *bodies, size_t cnt);
-static void handle_collision (struct body *bodies, size_t cnt);
+static void handle_collision (struct body *bodies, size_t cnt, size_t steps);
 static double get_distance (struct body *bdyA, struct body *bdyB);
 static void resolve_collision(struct body *bdyA, struct body *bdyB, double distance);
 static void handle_camera_pos (Camera2D *_camera);
@@ -21,7 +22,7 @@ int main(void)
 {
     const int screenWidth = SCRNW;
     const int screenHeight = SRCHT;
-    const int bdy_cnt = 1000;
+    const int bdy_cnt = 800;
     
     InitWindow(screenWidth, screenHeight, "n-body");
     SetTargetFPS(60);
@@ -31,13 +32,12 @@ int main(void)
     camera.zoom = 1;
 
     struct body bodies[bdy_cnt];
-    init_bodies (bodies, bdy_cnt, .15);
+    init_bodies (bodies, bdy_cnt, .01);
     
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
       // Update
       update_bodies (bodies, bdy_cnt); 
-      handle_collision (bodies, bdy_cnt);
       handle_camera_pos (&camera);
       
       /* Draw Bodies */
@@ -73,7 +73,7 @@ static void init_bodies (struct body *bodies, size_t cnt, float pct_heavy)
     struct body *bdy = &bodies[cnt];
     bdy->color = RAYWHITE;
     bdy->radius = 10;
-    bdy->mass = GetRandomValue (20, 30);
+    bdy->mass = GetRandomValue (20, 9999);
     bdy->posX = CENTER_X + GetRandomValue(-1 * random_spawn_range, random_spawn_range);
     bdy->posY = CENTER_Y + GetRandomValue(-1 * random_spawn_range, random_spawn_range); 
     bdy->vel_x = 0;
@@ -127,34 +127,36 @@ static void update_bodies (struct body *bodies, size_t cnt)
       
       /* Determine Distance between bodies */
       double radial_dist = get_distance (bdy1, bdy2);      
-      double r = radial_dist * radial_dist; // Needs to be squared not cubed 
+      double r = pow (radial_dist, 2);
 
-      /* Newton's Law of Gravity: F = mm-/r² ⟹ a = m/r² */      
-      ax -= bdy2->mass * (bdy1->posX - bdy2->posX) / r;
-      ay -= bdy2->mass * (bdy1->posY - bdy2->posY) / r;
+      /* Newton's Law of Gravity: F = mm-/r² ⟹ a = m/r² */
+      if (radial_dist > (bdy1->radius + bdy2->radius) * .95)
+      {
+        ax -= bdy2->mass * (bdy1->posX - bdy2->posX) / r; //(pow(r, bdy1->vel_x) + r);
+        ay -= bdy2->mass * (bdy1->posY - bdy2->posY) /  r;//(pow(r, bdy1->vel_y) + r);
+      } else {
+        ax +=  100 * bdy2->mass * (bdy1->posX - bdy2->posX) / (r);
+        ay +=  100 * bdy2->mass * (bdy1->posY - bdy2->posY) / (r);
+      }
      }
-    
+     
      bdy1->vel_x += ax * dt;
      bdy1->vel_y += ay * dt;
   }
 
-  /* Finalize position */
-  for (int i = 0; i < cnt; i++)
-    {
-      struct body *bdy = &bodies[i];
-      bdy->posX += bdy->vel_x * dt;
-      bdy->posY += bdy->vel_y * dt;
-    }
-
-
+  handle_collision(bodies, cnt, 4);
 }
 
 /* Resolves Body Collisions with perfect inelastic collision */
-static void handle_collision (struct body *bodies, size_t cnt)
+static void handle_collision (struct body *bodies, size_t cnt, size_t steps)
 {
   for (int i = 0; i < cnt; i++)
     {
-        struct body *bdy1 = &bodies[i];
+      struct body *bdy1 = &bodies[i];
+      for (int s = 0; s < steps; s++)
+      {
+        bdy1->posX += bdy1->vel_x * (dt / steps);
+        bdy1->posY += bdy1->vel_y * (dt / steps);
 
         for (int j = 0; j < cnt; j++)  // Avoid self-collision
         {
@@ -178,6 +180,7 @@ static void handle_collision (struct body *bodies, size_t cnt)
               bdy2->vel_y = vy;
           }
         }
+      }
     }
 
 }
@@ -190,7 +193,8 @@ static double get_distance (struct body *bdyA, struct body *bdyB)
   double dy = bdyA->posY - bdyB->posY;
   double dist = sqrt (dx * dx + dy * dy);
   double distance_tolerance = .20; /* Smallest distance two objects can be */
-  return (dist < distance_tolerance) ? distance_tolerance : dist;   
+  //return (dist < distance_tolerance) ? distance_tolerance : dist; 
+  return dist;  
 }
 
 /* 
