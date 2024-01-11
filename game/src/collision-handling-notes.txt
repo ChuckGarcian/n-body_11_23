@@ -1,0 +1,96 @@
+================================================================================
+                      Collision Handling Notes
+================================================================================
+Consider a space of body particles, if a collision event occurs wherein two 
+bodies overlap with each other in terms of their position and radius, we need 
+to reposition one bodies in a way that is "legal". In other words, the 
+repositioning should not make it overlapped with another body.
+
+--------------------------------------------------------------------------------
+                               Idea I
+--------------------------------------------------------------------------------
+Each body should have a list of bodies that it has touched during a collision
+
+GET_COLLISION_PARTNERS (List bodies)
+  For Every body A in Bodies
+    Let L be a list of bodies.
+    For Every particle P Colliding with A
+      Add P to L
+
+
+We then call handle all collision
+
+RESOLVE_COLISION (Body A)
+  
+  For Every Body B in A.partners
+    Reposition (A, B)
+
+HANDLE_ALL (list bodies)
+  For Every Body A in bodies
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

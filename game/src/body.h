@@ -1,3 +1,4 @@
+#include "list.h"
 /* Screen Information */
 #define SCRNW 800
 #define SRCHT 450
@@ -21,4 +22,6 @@ struct body
   /* Graphics Related Properties */
   double radius;
   struct Color color; 
+  
+  struct list_elem elem;
 };
